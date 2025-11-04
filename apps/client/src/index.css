@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.btn {
+  border-radius: 0.75rem;
+  transition: transform 120ms ease;
+}
+.btn:active {
+  transform: translateY(1px);
+}
