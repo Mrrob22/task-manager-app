@@ -1,16 +1,21 @@
 const KEY = 'tm_tasks';
 
-export function saveTasks(tasks: unknown) {
+export function saveTasks<T>(tasks: T): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(tasks));
-  } catch {}
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(KEY, JSON.stringify(tasks));
+  } catch (err) {
+    console.error('Failed to save tasks:', err);
+  }
 }
 
 export function loadTasks<T>(fallback: T): T {
   try {
-    const raw = localStorage.getItem(KEY);
+    if (typeof window === 'undefined') return fallback;
+    const raw = window.localStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
+  } catch (err) {
+    console.warn('Failed to load tasks, using fallback:', err);
     return fallback;
   }
 }

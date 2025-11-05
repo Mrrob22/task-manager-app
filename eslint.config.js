@@ -6,7 +6,19 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const prettier = require('eslint-config-prettier');
 
 module.exports = [
-  { ignores: ['node_modules', 'dist', 'build'] },
+  {
+    ignores: [
+      'node_modules',
+      'dist',
+      'build',
+      'eslint.config.*',
+      'vite.config.*',
+      'tailwind.config.*',
+      '**/postcss.config.*',
+      '**/webpack.config.*',
+      '**/.eslintrc.*'
+    ]
+  },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
