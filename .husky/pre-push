@@ -1,10 +1,6 @@
-cat > .husky/pre-push <<'SH'
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "Running pre-push checks..."
+echo "🚀 Running pre-push checks..."
 npm run lint || { echo "❌ Lint failed. Push aborted."; exit 1; }
 echo "✅ Pre-push checks passed!"
-SH
-
-chmod +x .husky/pre-push
