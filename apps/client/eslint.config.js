@@ -1,23 +1,40 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
+const js = require('@eslint/js');
+const globals = require('globals');
+const tseslint = require('@typescript-eslint/eslint-plugin');
+const tsParser = require('@typescript-eslint/parser');
+const reactHooks = require('eslint-plugin-react-hooks');
+const prettier = require('eslint-config-prettier');
 
-export default defineConfig([
-  globalIgnores(['dist']),
+module.exports = [
+  { ignores: ['node_modules', 'dist', 'build'] },
+  js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+      parser: tsParser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2023,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      ...require('@typescript-eslint/eslint-plugin').configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
     },
   },
-])
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    rules: {
+    },
+  },
+  prettier,
+];
