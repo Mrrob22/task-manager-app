@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 .btn {
   border-radius: 0.75rem;
   transition: transform 120ms ease;

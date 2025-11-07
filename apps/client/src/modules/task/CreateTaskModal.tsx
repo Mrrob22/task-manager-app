@@ -1,93 +1,117 @@
-import React from 'react';
-import Modal from '../../components/Modal';
-import { Formik, Form, Field } from 'formik';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import type { Priority, Assignee } from '../../types/task';
-import SelectAssigneeModal from './SelectAssigneeModal';
+import type { Priority } from '../../services/api';
+import { getPresignedUrl, putToS3 } from '../../services/api';
+import { useCreateTask } from './useTasks';
 
 const schema = Yup.object({
-  title: Yup.string().required('Обовʼязково'),
-  description: Yup.string().max(2000),
-  priority: Yup.mixed<Priority>().oneOf(['low', 'medium', 'high']).required()
+  title: Yup.string().required('Назва обовʼязкова'),
+  priority: Yup.string().oneOf(['low','medium','high']).required(),
+  dueDate: Yup.string().optional(),
 });
 
-export default function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [assignee, setAssignee] = React.useState<Assignee | undefined>(undefined);
-  const [nestedOpen, setNestedOpen] = React.useState(false);
+export default function CreateTaskModal({ onClose }: { onClose: () => void }) {
+  const createTask = useCreateTask();
 
   return (
-    <>
-      <Modal open={open} onClose={onClose} title="Створити задачу">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-3">
+      <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-2xl p-4">
+        <div className="text-lg font-semibold mb-3">Створити задачу</div>
+
         <Formik
-          initialValues={{ title: '', description: '', priority: 'medium' as Priority, dueDate: '', file: null as File | null }}
+          initialValues={{
+            title: '',
+            description: '',
+            priority: 'medium' as Priority,
+            dueDate: '',
+            assignee: null as { id: string; name: string } | null,
+            file: null as File | null,
+          }}
           validationSchema={schema}
-          onSubmit={() => { /* позже добавим submit */ }}
+          onSubmit={async (values, { setSubmitting }) => {
+            try {
+              let attachment: {
+                url: string;
+                key: string;
+                name: string;
+                size: number;
+                type: string;
+              } | undefined;
+
+              if (values.file) {
+                const sign = await getPresignedUrl({ filename: values.file.name, type: values.file.type });
+                await putToS3(sign.uploadUrl, values.file);
+                attachment = {
+                  url: sign.fileUrl,   // приватний URL — це ок
+                  key: sign.key,
+                  name: values.file.name,
+                  size: values.file.size,
+                  type: values.file.type,
+                };
+              }
+
+              await createTask.mutateAsync({
+                title: values.title,
+                description: values.description || undefined,
+                priority: values.priority,
+                dueDate: values.dueDate || undefined,
+                status: 'todo',
+                assignee: values.assignee || null,
+                attachment,
+              });
+
+              onClose();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
         >
-          {({ setFieldValue, values }) => (
-            <Form className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm">Назва</span>
-                <Field name="title" className="rounded-xl border p-2" placeholder="Нова задача" />
-              </label>
+          {({ isSubmitting, setFieldValue }) => (
+            <Form className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Назва</label>
+                <Field name="title" className="w-full border rounded-md px-2 py-1" />
+                <ErrorMessage name="title" component="div" className="text-red-500 text-xs" />
+              </div>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-sm">Опис</span>
-                <Field as="textarea" name="description" className="min-h-24 rounded-xl border p-2" />
-              </label>
+              <div>
+                <label className="block text-sm mb-1">Опис</label>
+                <Field as="textarea" name="description" className="w-full border rounded-md px-2 py-1" />
+              </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm">Пріоритет</span>
-                  <Field as="select" name="priority" className="rounded-xl border p-2">
-                    <option value="low">low</option>
-                    <option value="medium">medium</option>
-                    <option value="high">high</option>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm mb-1">Пріоритет</label>
+                  <Field as="select" name="priority" className="w-full border rounded-md px-2 py-1">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
                   </Field>
-                </label>
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm">Термін</span>
-                  <Field type="date" name="dueDate" className="rounded-xl border p-2" />
-                </label>
-
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm">Виконавець</span>
-                  <div className="flex items-center gap-2">
-                    <button type="button" className="rounded-lg border px-3 py-2 hover:bg-gray-50"
-                            onClick={() => setNestedOpen(true)}>
-                      Обрати виконавця
-                    </button>
-                    {assignee ? <span className="text-sm text-gray-700">{assignee.name}</span> :
-                      <span className="text-sm text-gray-400">не обрано</span>}
-                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Термін</label>
+                  <Field type="date" name="dueDate" className="w-full border rounded-md px-2 py-1" />
                 </div>
               </div>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-sm">Файл</span>
+              <div>
+                <label className="block text-sm mb-1">Файл</label>
                 <input
                   type="file"
                   onChange={(e) => setFieldValue('file', e.currentTarget.files?.[0] ?? null)}
                 />
-                {values.file && <span className="text-xs text-gray-500">{values.file.name}</span>}
-              </label>
+              </div>
 
-              <div className="mt-2 flex justify-end gap-2">
-                <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">Скасувати</button>
-                <button type="submit" className="rounded-xl bg-blue-600 px-4 py-2 text-white">
+              <div className="flex gap-2 justify-end pt-2">
+                <button type="button" className="px-3 py-1 rounded-md border" onClick={onClose}>Скасувати</button>
+                <button disabled={isSubmitting} type="submit" className="px-3 py-1 rounded-md bg-black text-white">
                   Створити
                 </button>
               </div>
             </Form>
           )}
         </Formik>
-      </Modal>
-
-      <SelectAssigneeModal
-        open={nestedOpen}
-        onClose={() => setNestedOpen(false)}
-        onPick={(a) => setAssignee(a)}
-      />
-    </>
+      </div>
+    </div>
   );
 }

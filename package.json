@@ -28,6 +28,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "client-s3": "github:aws-sdk/client-s3"
+    "@tailwindcss/vite": "^4.1.17",
+    "client-s3": "github:aws-sdk/client-s3",
+    "tailwindcss": "^4.1.17"
   }
 }
