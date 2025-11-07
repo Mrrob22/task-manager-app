@@ -1,4 +1,6 @@
+/* stylelint-disable import-notation */
 @import "tailwindcss";
+/* stylelint-enable import-notation */
 
 .btn {
   border-radius: 0.75rem;
