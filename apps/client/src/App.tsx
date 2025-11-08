@@ -19,7 +19,7 @@ export default function App() {
 
       <KanbanBoard />
 
-      {open && <CreateTaskModal onClose={() => setOpen(false)} />}
+      <CreateTaskModal open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }

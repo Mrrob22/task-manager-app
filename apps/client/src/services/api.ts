@@ -50,3 +50,20 @@ export async function patchTask(id: string, payload: Partial<TaskDTO>) {
   const { data } = await api.patch<TaskDTO>(`/tasks/${id}`, payload);
   return data;
 }
+
+export type UserDTO = {
+  _id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+};
+
+export async function searchUsers(q = '') {
+  const { data } = await api.get<UserDTO[]>('/users', { params: q ? { q } : {} });
+  return data;
+}
+
+export async function createUser(payload: { name: string; email: string; avatarUrl?: string }) {
+  const { data } = await api.post<UserDTO>('/users', payload);
+  return data;
+}

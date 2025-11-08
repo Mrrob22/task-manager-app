@@ -1,4 +1,11 @@
-import { IsEnum, IsOptional, IsString, MaxLength, IsDateString, ValidateNested } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  IsDateString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class AssigneeDto {
@@ -19,10 +26,19 @@ class AttachmentDto {
 export class CreateTaskDto {
   @IsString() title!: string;
   @IsOptional() @IsString() @MaxLength(2000) description?: string;
-  @IsEnum(['low','medium','high']) priority!: 'low'|'medium'|'high';
+  @IsEnum(['low', 'medium', 'high']) priority!: 'low' | 'medium' | 'high';
   @IsOptional() @IsDateString() dueDate?: string;
-  @IsEnum(['todo','in_progress','done']) status!: 'todo'|'in_progress'|'done';
+  @IsEnum(['todo', 'in_progress', 'done']) status!:
+    | 'todo'
+    | 'in_progress'
+    | 'done';
 
-  @IsOptional() @ValidateNested() @Type(() => AssigneeDto) assignee?: AssigneeDto;
-  @IsOptional() @ValidateNested() @Type(() => AttachmentDto) attachment?: AttachmentDto;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AssigneeDto)
+  assignee?: AssigneeDto;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AttachmentDto)
+  attachment?: AttachmentDto;
 }

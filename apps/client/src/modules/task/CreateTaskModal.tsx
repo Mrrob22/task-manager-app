@@ -1,48 +1,46 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import type { Priority } from '../../services/api';
+import type { Priority, UserDTO } from '../../services/api';
 import { getPresignedUrl, putToS3 } from '../../services/api';
 import { useCreateTask } from './useTasks';
+import SelectAssigneeModal from './SelectAssigneeModal';
+import { useState } from 'react';
+import Modal from '../../components/Modal';
 
 const schema = Yup.object({
   title: Yup.string().required('Назва обовʼязкова'),
-  priority: Yup.string().oneOf(['low','medium','high']).required(),
+  priority: Yup.string().oneOf(['low', 'medium', 'high']).required(),
   dueDate: Yup.string().optional(),
 });
 
-export default function CreateTaskModal({ onClose }: { onClose: () => void }) {
+export default function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createTask = useCreateTask();
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [assignee, setAssignee] = useState<{ id: string; name: string } | null>(null);
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-3">
-      <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-2xl p-4">
-        <div className="text-lg font-semibold mb-3">Створити задачу</div>
-
+    <>
+      <Modal open={open} onClose={onClose} title="Створити задачу">
         <Formik
           initialValues={{
             title: '',
             description: '',
             priority: 'medium' as Priority,
             dueDate: '',
-            assignee: null as { id: string; name: string } | null,
             file: null as File | null,
           }}
           validationSchema={schema}
           onSubmit={async (values, { setSubmitting }) => {
             try {
-              let attachment: {
-                url: string;
-                key: string;
-                name: string;
-                size: number;
-                type: string;
-              } | undefined;
-
+              let attachment;
               if (values.file) {
-                const sign = await getPresignedUrl({ filename: values.file.name, type: values.file.type });
+                const sign = await getPresignedUrl({
+                  filename: values.file.name,
+                  type: values.file.type,
+                });
                 await putToS3(sign.uploadUrl, values.file);
                 attachment = {
-                  url: sign.fileUrl,   // приватний URL — це ок
+                  url: sign.fileUrl,
                   key: sign.key,
                   name: values.file.name,
                   size: values.file.size,
@@ -56,7 +54,7 @@ export default function CreateTaskModal({ onClose }: { onClose: () => void }) {
                 priority: values.priority,
                 dueDate: values.dueDate || undefined,
                 status: 'todo',
-                assignee: values.assignee || null,
+                assignee,
                 attachment,
               });
 
@@ -77,6 +75,21 @@ export default function CreateTaskModal({ onClose }: { onClose: () => void }) {
               <div>
                 <label className="block text-sm mb-1">Опис</label>
                 <Field as="textarea" name="description" className="w-full border rounded-md px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Виконавець</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={assignee?.name ?? ''}
+                    placeholder="Не обрано"
+                    className="w-full border rounded-md px-2 py-1 bg-gray-50"
+                  />
+                  <button type="button" className="px-2 py-1 rounded-md border" onClick={() => setAssigneeOpen(true)}>
+                    Обрати
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -103,7 +116,9 @@ export default function CreateTaskModal({ onClose }: { onClose: () => void }) {
               </div>
 
               <div className="flex gap-2 justify-end pt-2">
-                <button type="button" className="px-3 py-1 rounded-md border" onClick={onClose}>Скасувати</button>
+                <button type="button" className="px-3 py-1 rounded-md border" onClick={onClose}>
+                  Скасувати
+                </button>
                 <button disabled={isSubmitting} type="submit" className="px-3 py-1 rounded-md bg-black text-white">
                   Створити
                 </button>
@@ -111,7 +126,16 @@ export default function CreateTaskModal({ onClose }: { onClose: () => void }) {
             </Form>
           )}
         </Formik>
-      </div>
-    </div>
+      </Modal>
+
+      <SelectAssigneeModal
+        open={assigneeOpen}
+        onClose={() => setAssigneeOpen(false)}
+        onSelect={(u: UserDTO) => {
+          setAssignee({ id: u._id, name: u.name });
+          setAssigneeOpen(false);
+        }}
+      />
+    </>
   );
 }

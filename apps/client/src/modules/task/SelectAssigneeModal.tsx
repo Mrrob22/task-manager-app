@@ -1,28 +1,74 @@
+import React from 'react';
+import { useUsers } from '../users/useUsers';
+import type { UserDTO } from '../../services/api';
+import AddUserModal from '../users/AddUserModal';
 import Modal from '../../components/Modal';
-import type { Assignee } from '../../types/task';
-
-const mockUsers: Assignee[] = [
-  { id: 'u1', name: 'Alice1' },
-  { id: 'u2', name: 'Bob1' },
-  { id: 'u3', name: 'Mrrob2' }
-];
 
 export default function SelectAssigneeModal({
-                                              open, onClose, onPick
-                                            }: { open: boolean; onClose: () => void; onPick: (a: Assignee) => void }) {
+                                              open,
+                                              onClose,
+                                              onSelect,
+                                            }: {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (u: UserDTO) => void;
+}) {
+  const [q, setQ] = React.useState('');
+  const { data = [], refetch, isFetching } = useUsers(q);
+  const [openAdd, setOpenAdd] = React.useState(false);
+
   return (
-    <Modal open={open} onClose={onClose} title="Обрати виконавця">
-      <div className="flex flex-col gap-2">
-        {mockUsers.map(u => (
-          <button
-            key={u.id}
-            className="rounded-xl border bg-white p-3 text-left hover:bg-gray-50"
-            onClick={() => { onPick(u); onClose(); }}
-          >
-            <div className="font-medium">{u.name}</div>
+    <>
+      <Modal open={open} onClose={onClose} title="Обрати виконавця">
+        <div className="flex gap-2 mb-3">
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Пошук по імені або email"
+            className="flex-1 border rounded-md px-2 py-1"
+          />
+          <button className="px-2 py-1 rounded-md border" onClick={() => setOpenAdd(true)}>
+            Додати
           </button>
-        ))}
-      </div>
-    </Modal>
+        </div>
+
+        {isFetching ? (
+          <div className="py-6 text-center opacity-70">Завантаження…</div>
+        ) : data.length === 0 ? (
+          <div className="py-6 text-center opacity-70">Нічого не знайдено</div>
+        ) : (
+          <ul className="divide-y">
+            {data.map((u) => (
+              <li key={u._id} className="py-2 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">{u.name}</div>
+                  <div className="text-xs opacity-70">{u.email}</div>
+                </div>
+                <button
+                  className="px-2 py-1 rounded-md border"
+                  onClick={() => {
+                    onSelect(u);
+                    onClose();
+                  }}
+                >
+                  Обрати
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+
+      <AddUserModal
+        open={openAdd}
+        onClose={() => setOpenAdd(false)}
+        onCreated={(u) => {
+          refetch();
+          setOpenAdd(false);
+          onSelect(u);
+        }}
+      />
+    </>
   );
 }

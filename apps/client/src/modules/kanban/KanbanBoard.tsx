@@ -1,4 +1,3 @@
-// apps/client/src/modules/kanban/KanbanBoard.tsx
 import * as React from 'react';
 import {
   DndContext,
@@ -102,7 +101,13 @@ function Card({ task, col }: { task: TaskDTO; col: Status }) {
       className="rounded-xl border border-zinc-200 bg-white p-3 cursor-grab"
     >
       <div className="text-sm font-medium">{task.title}</div>
-      {task.description && <div className="text-xs opacity-70">{task.description}</div>}
+      {task.assignee?.name && (
+        <div className="text-xs opacity-70 mt-0.5">@{task.assignee.name}</div>
+      )}
+      {task.description && (
+        <div className="text-xs opacity-70 mt-0.5">{task.description}</div>
+      )}
     </div>
   );
 }
+
