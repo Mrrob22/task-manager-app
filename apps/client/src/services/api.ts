@@ -36,6 +36,9 @@ export type TaskDTO = {
   updatedAt: string;
 };
 
+export type ReorderItem = { id: string; status: Status; order: number };
+export type ReorderPayload = { items: ReorderItem[] };
+
 export async function listTasks() {
   const { data } = await api.get<TaskDTO[]>('/tasks');
   return data;
@@ -43,6 +46,16 @@ export async function listTasks() {
 
 export async function createTask(payload: Partial<TaskDTO>) {
   const { data } = await api.post<TaskDTO>('/tasks', payload);
+  return data;
+}
+
+export async function reorderTasks(
+  payload: ReorderPayload
+): Promise<{ modified: number; matched: number }> {
+  const { data } = await api.patch<{ modified: number; matched: number }>(
+    "/tasks/reorder",
+    payload
+  );
   return data;
 }
 

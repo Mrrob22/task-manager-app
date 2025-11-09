@@ -10,19 +10,30 @@ import {
   type Over,
 } from '@dnd-kit/core';
 import { CSS, type Transform } from '@dnd-kit/utilities';
-import { useTasks, useUpdateTask } from '../task/useTasks';
+import { useTasks, useReorderTasks, useDeleteTask } from '../task/useTasks';
 import type { TaskDTO, Status } from '../../services/api';
 
 import TaskActionMenu from './TaskActionMenu';
 import EditTaskModal from '../task/EditTaskModal';
 import ConfirmModal from '../../components/ConfirmModal';
-import { useDeleteTask } from '../task/useTasks';
 
 const COLUMNS: Array<{ id: Status; title: string }> = [
   { id: 'todo',        title: 'Todo' },
   { id: 'in_progress', title: 'In Progress' },
   { id: 'done',        title: 'Done' },
 ];
+
+const PRIORITY_RANK: Record<'low' | 'medium' | 'high', number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+};
+function sortByPriorityThenOrder(a: TaskDTO, b: TaskDTO) {
+  const pa = PRIORITY_RANK[a.priority] ?? 0;
+  const pb = PRIORITY_RANK[b.priority] ?? 0;
+  if (pa !== pb) return pb - pa;
+  return (a.order ?? 0) - (b.order ?? 0);
+}
 
 export default function KanbanBoard() {
   const [menu, setMenu] = React.useState<{ x: number; y: number; task: TaskDTO; rect: DOMRect | null } | null>(null);
@@ -31,27 +42,51 @@ export default function KanbanBoard() {
   const delTask = useDeleteTask();
 
   const { data: tasks = [], isLoading } = useTasks();
-  const updateTask = useUpdateTask();
+  const reorder = useReorderTasks();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const grouped = React.useMemo(() => ({
-    todo:        tasks.filter(t => t.status === 'todo').sort((a,b)=>a.order-b.order),
-    in_progress: tasks.filter(t => t.status === 'in_progress').sort((a,b)=>a.order-b.order),
-    done:        tasks.filter(t => t.status === 'done').sort((a,b)=>a.order-b.order),
+    todo:        tasks.filter(t => t.status === 'todo').sort(sortByPriorityThenOrder),
+    in_progress: tasks.filter(t => t.status === 'in_progress').sort(sortByPriorityThenOrder),
+    done:        tasks.filter(t => t.status === 'done').sort(sortByPriorityThenOrder),
   }), [tasks]);
 
+  const getNewOrder = (list: TaskDTO[], overId: string | null) => {
+    if (!overId) return (Math.max(0, ...list.map(t => t.order ?? 0)) + 1);
+    const idx = list.findIndex(t => t._id === overId);
+    if (idx === -1) return (Math.max(0, ...list.map(t => t.order ?? 0)) + 1);
+    const prev = list[idx - 1]?.order ?? (list[idx].order ?? 0) - 1;
+    const next = list[idx]?.order ?? prev + 2;
+    return (prev + next) / 2;
+  };
+
   const onDragEnd = (e: DragEndEvent) => {
-    const taskId = e.active.id as string;
+    const id = e.active.id as string;
     const over = e.over as Over | null;
-    const overCol = (over?.data.current as { col: Status } | undefined)?.col;
-    if (!overCol) return;
+    const destCol = (over?.data.current as { col: Status } | undefined)?.col;
+    if (!destCol) return;
 
-    const task = tasks.find(t => t._id === taskId);
-    if (!task || task.status === overCol) return;
+    const task = tasks.find(t => t._id === id);
+    if (!task) return;
 
-    updateTask.mutate({ id: taskId, data: { status: overCol } });
+    const destList = tasks
+      .filter(t => t.status === destCol && t._id !== id)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    const overCardId = over?.id && typeof over.id === 'string' && over.id.startsWith('card-')
+      ? over.id.replace('card-', '')
+      : null;
+
+    const newOrder = getNewOrder(destList, overCardId);
+    // updateTask.mutate({ id: taskId, data: { status: overCol } });
+
+    // делаем один вызов reoder (бек обновит и status, и order)
+    reorder.mutate({
+      items: [{ id, status: destCol, order: newOrder }],
+    });
+
   };
 
   const handleCardDoubleClick = (task: TaskDTO, e: React.MouseEvent) => {

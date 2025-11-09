@@ -1,7 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ReorderTasksDto } from './dto/reorder-task.dto';
 
 @Controller('api/tasks')
 export class TasksController {
@@ -15,6 +24,13 @@ export class TasksController {
   @Post()
   create(@Body() dto: CreateTaskDto) {
     return this.service.create(dto);
+  }
+
+  @Patch('reorder')
+  reorder(
+    @Body() dto: ReorderTasksDto,
+  ): Promise<{ modified: number; matched: number }> {
+    return this.service.reorder(dto.items);
   }
 
   @Patch(':id')
