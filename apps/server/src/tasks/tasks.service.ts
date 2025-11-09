@@ -4,10 +4,14 @@ import { Model, Types } from 'mongoose';
 import { Task } from './schemas/task.schema';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { S3Service } from '../upload/s3.service';
 
 @Injectable()
 export class TasksService {
-  constructor(@InjectModel(Task.name) private readonly model: Model<Task>) {}
+  constructor(
+    @InjectModel(Task.name) private readonly model: Model<Task>,
+    private readonly s3: S3Service,
+  ) {}
 
   findAll() {
     return this.model.find().sort({ createdAt: -1 }).lean();
@@ -45,8 +49,22 @@ export class TasksService {
   }
 
   async remove(id: string) {
-    const res = await this.model.findByIdAndDelete(id);
-    if (!res) throw new NotFoundException('Task not found');
+    const task = await this.model
+      .findById(id)
+      .lean<{ _id: string; attachment?: { key?: string } }>();
+
+    if (!task) throw new NotFoundException('Task not found');
+
+    const key = task.attachment?.key;
+    if (key) {
+      await this.s3.deleteObject(key);
+    }
+    if (key) {
+      console.log('🧹 Deleting from S3:', key);
+      await this.s3.deleteObject(key);
+    }
+
+    await this.model.findByIdAndDelete(id);
     return { ok: true };
   }
 }
