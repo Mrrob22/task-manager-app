@@ -25,8 +25,8 @@ const COLUMNS: Array<{ id: Status; title: string }> = [
 ];
 
 export default function KanbanBoard() {
-  const [menu, setMenu] = React.useState<{ x: number; y: number; task: TaskDTO } | null>(null);
-  const [edit, setEdit] = React.useState<TaskDTO | null>(null);
+  const [menu, setMenu] = React.useState<{ x: number; y: number; task: TaskDTO; rect: DOMRect | null } | null>(null);
+  const [edit, setEdit] = React.useState<{ task: TaskDTO; rect: DOMRect | null } | null>(null);
   const [confirmDel, setConfirmDel] = React.useState<TaskDTO | null>(null);
   const delTask = useDeleteTask();
 
@@ -55,7 +55,8 @@ export default function KanbanBoard() {
   };
 
   const handleCardDoubleClick = (task: TaskDTO, e: React.MouseEvent) => {
-    setMenu({ x: e.clientX, y: e.clientY, task });
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setMenu({ x: e.clientX, y: e.clientY, task, rect });
   };
 
   if (isLoading) return <div className="p-6">Loading…</div>;
@@ -78,7 +79,7 @@ export default function KanbanBoard() {
         <TaskActionMenu
           x={menu.x}
           y={menu.y}
-          onEdit={() => { setEdit(menu.task); setMenu(null); }}
+          onEdit={() => { setEdit({ task: menu.task, rect: menu.rect }); setMenu(null); }}
           onDelete={() => { setConfirmDel(menu.task); setMenu(null); }}
           onClose={() => setMenu(null)}
         />
@@ -88,7 +89,8 @@ export default function KanbanBoard() {
         <EditTaskModal
           open={true}
           onClose={() => setEdit(null)}
-          task={edit}
+          task={edit.task}
+          fromRect={edit.rect}
         />
       )}
 

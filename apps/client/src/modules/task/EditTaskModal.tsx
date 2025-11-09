@@ -11,18 +11,18 @@ const schema = Yup.object({
 });
 
 export default function EditTaskModal({
-                                        open, onClose, task,
-                                      }: { open: boolean; onClose: () => void; task: TaskDTO }) {
+                                        open, onClose, task, fromRect,
+                                      }: { open: boolean; onClose: () => void; task: TaskDTO; fromRect: DOMRect | null }) {
   const updateTask = useUpdateTask();
 
   return (
-    <Modal open={open} onClose={onClose} title="Edit task">
+    <Modal open={open} onClose={onClose} title="Edit task" fromRect={fromRect}>
       <Formik
         initialValues={{
           title: task.title,
           description: task.description ?? '',
           priority: task.priority as Priority,
-          dueDate: task.dueDate ? String(task.dueDate).slice(0,10) : '',
+          dueDate: task.dueDate ? String(task.dueDate).slice(0, 10) : '',
         }}
         validationSchema={schema}
         onSubmit={async (v) => {
