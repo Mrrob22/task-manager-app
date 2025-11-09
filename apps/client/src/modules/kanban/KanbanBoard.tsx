@@ -13,6 +13,11 @@ import { CSS, type Transform } from '@dnd-kit/utilities';
 import { useTasks, useUpdateTask } from '../task/useTasks';
 import type { TaskDTO, Status } from '../../services/api';
 
+import TaskActionMenu from './TaskActionMenu';
+import EditTaskModal from '../task/EditTaskModal';
+import ConfirmModal from '../../components/ConfirmModal';
+import { useDeleteTask } from '../task/useTasks';
+
 const COLUMNS: Array<{ id: Status; title: string }> = [
   { id: 'todo',        title: 'Todo' },
   { id: 'in_progress', title: 'In Progress' },
@@ -20,6 +25,11 @@ const COLUMNS: Array<{ id: Status; title: string }> = [
 ];
 
 export default function KanbanBoard() {
+  const [menu, setMenu] = React.useState<{ x: number; y: number; task: TaskDTO } | null>(null);
+  const [edit, setEdit] = React.useState<TaskDTO | null>(null);
+  const [confirmDel, setConfirmDel] = React.useState<TaskDTO | null>(null);
+  const delTask = useDeleteTask();
+
   const { data: tasks = [], isLoading } = useTasks();
   const updateTask = useUpdateTask();
   const sensors = useSensors(
@@ -44,20 +54,68 @@ export default function KanbanBoard() {
     updateTask.mutate({ id: taskId, data: { status: overCol } });
   };
 
+  const handleCardDoubleClick = (task: TaskDTO, e: React.MouseEvent) => {
+    setMenu({ x: e.clientX, y: e.clientY, task });
+  };
+
   if (isLoading) return <div className="p-6">Loading…</div>;
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
         {COLUMNS.map(col => (
-          <Column key={col.id} id={col.id} title={col.title} items={grouped[col.id]} />
+          <Column
+            key={col.id}
+            id={col.id}
+            title={col.title}
+            items={grouped[col.id]}
+            onCardDoubleClick={handleCardDoubleClick}
+          />
         ))}
       </div>
+
+      {menu && (
+        <TaskActionMenu
+          x={menu.x}
+          y={menu.y}
+          onEdit={() => { setEdit(menu.task); setMenu(null); }}
+          onDelete={() => { setConfirmDel(menu.task); setMenu(null); }}
+          onClose={() => setMenu(null)}
+        />
+      )}
+
+      {edit && (
+        <EditTaskModal
+          open={true}
+          onClose={() => setEdit(null)}
+          task={edit}
+        />
+      )}
+
+      {confirmDel && (
+        <ConfirmModal
+          open={true}
+          onClose={() => setConfirmDel(null)}
+          title="Delete task"
+          text={`Are you sure you want to delete "${confirmDel.title}"?`}
+          onConfirm={async () => {
+            await delTask.mutateAsync(confirmDel._id);
+            setConfirmDel(null);
+          }}
+        />
+      )}
     </DndContext>
   );
 }
 
-function Column({ id, title, items }: { id: Status; title: string; items: TaskDTO[] }) {
+function Column({
+                  id, title, items, onCardDoubleClick,
+                }: {
+  id: Status;
+  title: string;
+  items: TaskDTO[];
+  onCardDoubleClick: (task: TaskDTO, e: React.MouseEvent) => void;
+}) {
   const { isOver, setNodeRef } = useDroppable({
     id: `drop-${id}`,
     data: { col: id },
@@ -72,14 +130,20 @@ function Column({ id, title, items }: { id: Status; title: string; items: TaskDT
       <div className="font-semibold mb-2">{title}</div>
       <div className="space-y-2">
         {items.map(t => (
-          <Card key={t._id} task={t} col={id} />
+          <Card key={t._id} task={t} col={id} onDoubleClick={onCardDoubleClick} />
         ))}
       </div>
     </div>
   );
 }
 
-function Card({ task, col }: { task: TaskDTO; col: Status }) {
+function Card({
+                task, col, onDoubleClick,
+              }: {
+  task: TaskDTO;
+  col: Status;
+  onDoubleClick: (task: TaskDTO, e: React.MouseEvent) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: task._id,
     data: { from: col },
@@ -97,6 +161,7 @@ function Card({ task, col }: { task: TaskDTO; col: Status }) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onDoubleClick={(e) => onDoubleClick(task, e)}
       style={style}
       className="rounded-xl border border-zinc-200 bg-white p-3 cursor-grab"
     >
@@ -110,4 +175,3 @@ function Card({ task, col }: { task: TaskDTO; col: Status }) {
     </div>
   );
 }
-

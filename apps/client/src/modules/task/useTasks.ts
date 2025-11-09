@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createTask, listTasks, patchTask, type TaskDTO } from '../../services/api';
+import { createTask, deleteTask, listTasks, patchTask, type TaskDTO } from '../../services/api';
 
 export function useTasks() {
   return useQuery({ queryKey: ['tasks'], queryFn: listTasks });
@@ -26,5 +26,15 @@ export function useUpdateTask() {
     },
     onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(['tasks'], ctx.prev),
     onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteTask(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
   });
 }

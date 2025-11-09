@@ -51,6 +51,11 @@ export async function patchTask(id: string, payload: Partial<TaskDTO>) {
   return data;
 }
 
+export async function deleteTask(id: string) {
+  const { data } = await api.delete(`/tasks/${id}`);
+  return data;
+}
+
 export type UserDTO = {
   _id: string;
   name: string;

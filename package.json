@@ -30,6 +30,8 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
     "client-s3": "github:aws-sdk/client-s3",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.553.0",
     "tailwindcss": "^4.1.17"
   }
 }

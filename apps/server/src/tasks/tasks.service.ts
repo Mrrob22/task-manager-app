@@ -18,7 +18,9 @@ export class TasksService {
   }
 
   async update(id: string, dto: UpdateTaskDto) {
-    const doc = await this.model.findByIdAndUpdate(id, dto, { new: true }).lean();
+    const doc = await this.model
+      .findByIdAndUpdate(id, dto, { new: true })
+      .lean();
     if (!doc) throw new NotFoundException('Task not found');
     return doc;
   }
